@@ -23,6 +23,7 @@ enum {
 	CAMERAVECTORMAP_MAP_ON,
 	CAMERAVECTORMAP_REFLECTED_ON,
 	CAMERAVECTORMAP_INVERTED_ON,
+	CAMERAVECTORMAP_OBSERVER_ON,
 };
 
 static ParamBlockDesc2 cameravectormap_param_blk(gnormal_params, _T("params"), 0, &CameraVectorMapDesc, P_AUTO_CONSTRUCT + P_AUTO_UI, PBLOCK_REF,
@@ -47,6 +48,11 @@ static ParamBlockDesc2 cameravectormap_param_blk(gnormal_params, _T("params"), 0
 	p_default, 2.2f,
 	p_range, 1.0f, 5.0f,
 	p_ui, TYPE_SINGLECHECKBOX, IDC_INVERTED_ON,
+	p_end,
+	CAMERAVECTORMAP_OBSERVER_ON, _T("ObserverSpaceEnabled"), TYPE_BOOL, 0, IDS_OBSERVER_ON,
+	p_default, 2.2f,
+	p_range, 1.0f, 5.0f,
+	p_ui, TYPE_SINGLECHECKBOX, IDC_OBSERVER_ON,
 	p_end,
 	p_end
 );
@@ -197,6 +203,7 @@ RefTargetHandle CameraVectorMap::Clone(RemapDir& remap) {
 	mnew->mpSubTex = NULL;
 	mnew->mReflectedOn = mReflectedOn;
 	mnew->mInvertedOn = mInvertedOn;
+	mnew->mObserverSpaceOn = mObserverSpaceOn;
 	mnew->mMapOn = mMapOn;
 	//mnew->mReverseGamma = mReverseGamma;
 	//mnew->mSolidColor = mSolidColor;
@@ -239,7 +246,7 @@ void CameraVectorMap::Update(TimeValue t, Interval& valid) {
 		mpPblock->GetValue(CAMERAVECTORMAP_MAP_ON, t, mMapOn, ivalid);
 		mpPblock->GetValue(CAMERAVECTORMAP_REFLECTED_ON, t, mReflectedOn, ivalid);
 		mpPblock->GetValue(CAMERAVECTORMAP_INVERTED_ON, t, mInvertedOn, ivalid);
-
+		mpPblock->GetValue(CAMERAVECTORMAP_OBSERVER_ON, t, mObserverSpaceOn, ivalid);
 		//mpPblock->GetValue(CAMERAVECTORMAP_GAMMA, t, mGamma, ivalid);
 		//mpPblock->GetValue(CAMERAVECTORMAP_GAIN, t, mGain, ivalid);
 		//mpPblock->GetValue(CAMERAVECTORMAP_REVERSE_GAMMA, t, mReverseGamma, ivalid);
@@ -348,12 +355,16 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 
 	Point3 baryCoord = sc.BarycentricCoords();
-	Point3 viewVector = sc.OrigView();
+	Point3 viewVector = Normalize(sc.OrigView());
 	Point3 normalVector = sc.OrigNormal();
 
 	retval.r = 0.0;
 	retval.g = 0.0;
 	retval.b = 0.0;
+
+	float ox = viewVector.x;
+	float oy = viewVector.y;
+	float oz = viewVector.z;
 
 	if (mMapOn) {
 		retval.r = viewVector.x;
@@ -373,7 +384,7 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 				Point3 nDir = Normalize(dir);
 
 				if (mReflectedOn) {
-					//{vx - nx (nx vx + ny vy + nz vz), vy - ny (nx vx + ny vy + nz vz), vz - nz(nx vx + ny vy + nz vz)}
+					//{-vx + 2*nx*(nx*vx + ny*vy + nz*vz),-vy + 2*ny*(nx*vx + ny*vy + nz*vz),-vz + 2*nz*(nx*vx + ny*vy + nz*vz)}
 					float vx = nDir.x;
 					float vy = nDir.y;
 					float vz = nDir.z;
@@ -382,13 +393,30 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 					float ny = normalVector.y;
 					float nz = normalVector.z;
 
-					float rx = vx - nx*(nx*vx + ny*vy + nz*vz);
-					float ry = vy - ny*(nx*vx + ny*vy + nz*vz);
-					float rz = vz - nz*(nx*vx + ny*vy + nz*vz);
+					float rx = -vx + 2 * nx * (nx * vx + ny * vy + nz * vz);
+					float ry = -vy + 2 * ny * (nx * vx + ny * vy + nz * vz);
+					float rz = -vz + 2 * nz * (nx * vx + ny * vy + nz * vz);
 
-					retval.r = rx;
-					retval.g = ry;
-					retval.b = rz;
+					if (mObserverSpaceOn) {
+						// {(oy2*rx + ox2*oz*rx + ox*oy*(-1 + oz)*ry)/(ox2 + oy2) - ox*rz,(ox*oy*(-1 + oz)*rx + ox2*ry + oy2*oz*ry)/(ox2 + oy2) - oy*rz,ox*rx + oy*ry + oz*rz}
+						float ox2 = ox * ox;
+						float oy2 = oy * oy; 
+						float oz2 = oz * oz;
+						
+						float osx = (oy2 * rx + ox2 * oz * rx + ox * oy * (-1 + oz) * ry) / (ox2 + oy2) - ox * rz;
+						float osy = (ox * oy * (-1 + oz) * rx + ox2 * ry + oy2 * oz * ry) / (ox2 + oy2) - oy * rz;
+						float osz = ox* rx + oy * ry + oz * rz;
+
+						retval.r = osx;
+						retval.g = osy;
+						retval.b = osz;
+
+					}
+					else {
+						retval.r = rx;
+						retval.g = ry;
+						retval.b = rz;
+					}
 				}
 				else {
 					retval.r = nDir.x;

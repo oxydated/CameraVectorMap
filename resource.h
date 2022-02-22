@@ -10,6 +10,7 @@
 #define IDS_SOLID_COLOR                 5
 #define IDS_INVERTED_ON                 5
 #define IDS_MAP                         6
+#define IDS_OBSERVER_ON                 6
 #define IDS_GAMMA                       7
 #define IDS_GAIN                        8
 #define IDS_MAP_ON                      9
@@ -22,6 +23,7 @@
 #define IDC_MAP                         1005
 #define IDC_INVERTED_ON                 1005
 #define IDC_GAMMA_SPIN                  1006
+#define IDC_OBSERVER_ON                 1006
 #define IDC_GAMMA_EDIT                  1007
 #define IDC_GAIN_SPIN                   1008
 #define IDC_GAIN_EDIT                   1009

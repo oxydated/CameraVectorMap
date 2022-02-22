@@ -98,6 +98,7 @@ private:
 	BOOL mMapOn;
 	BOOL mReflectedOn;
 	BOOL mInvertedOn;
+	BOOL mObserverSpaceOn;
 	BOOL mReverseGamma;
 	//AColor mSolidColor;
 	//float mGamma;
