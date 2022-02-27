@@ -20,14 +20,15 @@
 #define IDC_SOLID_COLOR                 1002
 #define IDC_MAP_ON                      1003
 #define IDC_REFLECTED_ON                1004
-#define IDC_MAP                         1005
 #define IDC_INVERTED_ON                 1005
 #define IDC_GAMMA_SPIN                  1006
 #define IDC_OBSERVER_ON                 1006
 #define IDC_GAMMA_EDIT                  1007
 #define IDC_GAIN_SPIN                   1008
+#define IDC_MAP                         1008
 #define IDC_GAIN_EDIT                   1009
 #define IDC_REVERSE_GAMMA               1010
+#define IDC_CUSTOM1                     1011
 
 // Next default values for new objects
 // 
@@ -35,7 +36,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        104
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1011
+#define _APS_NEXT_CONTROL_VALUE         1012
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -1,4 +1,5 @@
 #include "CameraVectorMap.h"
+#include "ShadeContextProxy.h"
 
 using namespace MaxSDK::Graphics;
 
@@ -24,6 +25,7 @@ enum {
 	CAMERAVECTORMAP_REFLECTED_ON,
 	CAMERAVECTORMAP_INVERTED_ON,
 	CAMERAVECTORMAP_OBSERVER_ON,
+	CAMERAVECTORMAP_MAP,
 };
 
 static ParamBlockDesc2 cameravectormap_param_blk(gnormal_params, _T("params"), 0, &CameraVectorMapDesc, P_AUTO_CONSTRUCT + P_AUTO_UI, PBLOCK_REF,
@@ -32,6 +34,11 @@ static ParamBlockDesc2 cameravectormap_param_blk(gnormal_params, _T("params"), 0
 	IDS_PARAMS,
 	0, 0, NULL,
 	//params
+	CAMERAVECTORMAP_MAP, _T("map"), TYPE_TEXMAP, 0, IDS_MAP,
+	p_refno, 1,
+	p_subtexno, 0,
+	p_ui, TYPE_TEXMAPBUTTON, IDC_MAP,
+	p_end,
 	CAMERAVECTORMAP_MAP_ON, _T("mapEnabled"), TYPE_BOOL, 0, IDS_MAP_ON,
 	p_default, 2.2f,
 	p_range, 1.0f, 5.0f,
@@ -265,7 +272,7 @@ void CameraVectorMap::Update(TimeValue t, Interval& valid) {
 
 void CameraVectorMap::SetSubTexmap(int i, Texmap* m) {
 	ReplaceReference(MAP_REF, m);
-	//cameravectormap_param_blk.InvalidateUI(CAMERAVECTORMAP_MAP);
+	cameravectormap_param_blk.InvalidateUI(CAMERAVECTORMAP_MAP);
 	mapValid.SetEmpty();
 }
 
@@ -353,6 +360,8 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 	AColor retval;
 	float gamma = 1.0;
 
+	ShadeContextProxy scp(sc);
+
 
 	Point3 baryCoord = sc.BarycentricCoords();
 	Point3 viewVector = Normalize(sc.OrigView());
@@ -428,8 +437,10 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 	}
 
+	scp.SetUVW(sc.UVW());
+
 	if (mpSubTex) {
-		retval = mpSubTex->EvalColor(sc);
+		retval = mpSubTex->EvalColor(scp);
 	}
 
 	return mInvertedOn ? retval * -1 : retval;
