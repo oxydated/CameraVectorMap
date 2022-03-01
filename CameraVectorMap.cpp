@@ -342,14 +342,6 @@ BITMAPINFO* CameraVectorMap::GetVPDisplayDIB(TimeValue t, TexHandleMaker& thmake
 	bm->DeleteThis();
 	valid.SetInfinite();
 
-	//AColor ac;
-	//mpPblock->GetValue(CAMERAVECTORMAP_SOLID_COLOR, t, ac, valid);
-	//float f;
-	//mpPblock->GetValue(CAMERAVECTORMAP_GAMMA, t, f, valid);
-	//mpPblock->GetValue(CAMERAVECTORMAP_GAIN, t, f, valid);
-	//BOOL b;
-	//mpPblock->GetValue(CAMERAVECTORMAP_REVERSE_GAMMA, t, b, valid);
-
 	return bmi;
 }
 
@@ -380,7 +372,8 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 		retval.g = viewVector.y;
 		retval.b = viewVector.z;
 	}
-	else {
+	else 
+	{
 		Point3 dir;
 		float dotL;
 		float diffuse;
@@ -388,8 +381,7 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 		if (ld != nullptr) {
 			Color lightColor;
 			if (ld->Illuminate(sc, normalVector, lightColor, dir, dotL, diffuse)) {
-				//retval = AColor(lightColor);
-
+				
 				Point3 nDir = Normalize(dir);
 
 				if (mReflectedOn) {
@@ -407,27 +399,49 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 					float rz = -vz + 2 * nz * (nx * vx + ny * vy + nz * vz);
 
 					if (mObserverSpaceOn) {
-						// {(oy2*rx + ox2*oz*rx + ox*oy*(-1 + oz)*ry)/(ox2 + oy2) - ox*rz,(ox*oy*(-1 + oz)*rx + ox2*ry + oy2*oz*ry)/(ox2 + oy2) - oy*rz,ox*rx + oy*ry + oz*rz}
-						float ox2 = ox * ox;
-						float oy2 = oy * oy; 
-						float oz2 = oz * oz;
-						
-						float osx = (oy2 * rx + ox2 * oz * rx + ox * oy * (-1 + oz) * ry) / (ox2 + oy2) - ox * rz;
-						float osy = (ox * oy * (-1 + oz) * rx + ox2 * ry + oy2 * oz * ry) / (ox2 + oy2) - oy * rz;
-						float osz = ox* rx + oy * ry + oz * rz;
 
-						retval.r = osx;
-						retval.g = osy;
-						retval.b = osz;
+						float& cx = rx;
+						float& cy = ry;
+						float& cz = rz;
 
+						float& ix = ox;
+						float& iy = oy;
+						float& iz = oz;
+
+						float cx2 = cx * cx;
+						float cy2 = cy * cy;
+						float cz2 = cz * cz;
+
+						float obsx = (cy2 * ix + cx2 * cz * ix + cx * cy * (-1 + cz) * iy) / (cx2 + cy2) - cx * iz;
+						float obsy = (cx * cy * (-1 + cz) * ix + cx2 * iy + cy2 * cz * iy) / (cx2 + cy2) - cy * iz;
+						float obsz = cx * ix + cy * iy + cz * iz;
+
+						if (mpSubTex) {
+							Point3 oUVW;
+
+							oUVW.x = (float)(obsx + 1) / 2;
+							oUVW.y = (float)(obsy + 1) / 2;
+							oUVW.z = 0.0f;
+
+							scp.SetUVW(oUVW);
+							retval = mpSubTex->EvalColor(scp);
+						}
+						else 
+						{
+							retval.r = obsx;
+							retval.g = obsy;
+							retval.b = obsz;
+						}
 					}
-					else {
+					else 
+					{
 						retval.r = rx;
 						retval.g = ry;
 						retval.b = rz;
 					}
 				}
-				else {
+				else 
+				{
 					retval.r = nDir.x;
 					retval.g = nDir.y;
 					retval.b = nDir.z;
@@ -437,11 +451,11 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 	}
 
-	scp.SetUVW(sc.UVW());
+	//scp.SetUVW(sc.UVW()/2.0);
 
-	if (mpSubTex) {
-		retval = mpSubTex->EvalColor(scp);
-	}
+	//if (mpSubTex) {
+	//	retval = mpSubTex->EvalColor(scp);
+	//}
 
 	return mInvertedOn ? retval * -1 : retval;
 }
