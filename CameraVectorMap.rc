@@ -50,21 +50,23 @@ END
 // Dialog
 //
 
-IDD_PARAM_PANEL DIALOGEX 0, 0, 209, 139
+IDD_PARAM_PANEL DIALOGEX 0, 0, 209, 149
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_VISIBLE
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    GROUPBOX        "Color / Gamma / Gain",IDC_STATIC,19,15,174,102
+    GROUPBOX        "Color / Gamma / Gain",IDC_STATIC,19,15,174,119
     LTEXT           "Light or Observer?",IDC_STATIC,35,30,60,8
-    CONTROL         "",IDC_MAP_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,29,11,10
-    LTEXT           "Reflected?",IDC_STATIC,35,45,35,8
-    CONTROL         "",IDC_REFLECTED_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,44,11,10
-    LTEXT           "Inverted?",IDC_STATIC,35,60,32,8
-    CONTROL         "",IDC_INVERTED_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,59,11,10
-    LTEXT           "Observer Space?",IDC_STATIC,35,75,56,8
-    CONTROL         "",IDC_OBSERVER_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,74,11,10
-    LTEXT           "Map:",IDC_STATIC,35,90,17,8
-    CONTROL         "Custom1",IDC_MAP,"CustButton",WS_TABSTOP,59,89,114,14
+    CONTROL         "",IDC_VIEWVECTOR_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,29,11,10
+    LTEXT           "Reflected?",IDC_STATIC,35,60,35,8
+    CONTROL         "",IDC_REFLECTED_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,59,11,10
+    LTEXT           "Inverted?",IDC_STATIC,35,75,32,8
+    CONTROL         "",IDC_INVERTED_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,74,11,10
+    LTEXT           "Observer Space?",IDC_STATIC,35,90,56,8
+    CONTROL         "",IDC_OBSERVER_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,89,11,10
+    LTEXT           "Map:",IDC_STATIC,35,105,17,8
+    CONTROL         "Custom1",IDC_MAP,"CustButton",WS_TABSTOP,59,104,114,14
+    LTEXT           "Diffuse?",IDC_STATIC,35,45,27,8
+    CONTROL         "",IDC_DIFFUSE_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,44,11,10
 END
 
 
@@ -81,7 +83,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 202
         TOPMARGIN, 7
-        BOTTOMMARGIN, 132
+        BOTTOMMARGIN, 142
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -109,12 +111,14 @@ BEGIN
     IDS_CATEGORY            "other"
     IDS_CLASS_NAME          "CameraVectorMap"
     IDS_PARAMS              "Parameters"
-    IDS_INVERTED_ON         "Inverted"
+    IDS_MAP                 "Map"
     IDS_OBSERVER_ON         "Observer Space"
-    IDS_MAP_ON              "Map Enable"
+    IDS_INVERTED_ON         "Invert Colors"
+    IDS_VIEWVECTOR_ON       "View Vector"
     IDS_REVERSE_GAMMA       "Reverse Gamma"
     IDS_CLASS_NAME_IMP      "Camera Vector Map"
     IDS_REFLECTED_ON        "Reflected or Incident"
+    IDS_DIFFUSE_ON          "Diffuse"
 END
 
 #endif    // Portuguese (Brazil) resources

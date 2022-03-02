@@ -95,8 +95,9 @@ private:
 	Texmap* mpSubTex;	//ref 1
 	Interval ivalid;
 	Interval mapValid;
-	BOOL mMapOn;
+	BOOL mViewVectorOn;
 	BOOL mReflectedOn;
+	BOOL mDiffuseOn;
 	BOOL mInvertedOn;
 	BOOL mObserverSpaceOn;
 	BOOL mReverseGamma;

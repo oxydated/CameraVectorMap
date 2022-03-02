@@ -21,9 +21,10 @@ static CameraVectorMapClassDesc CameraVectorMapDesc;
 ClassDesc2* GetCameraVectorMapDesc() { return &CameraVectorMapDesc; }
 
 enum {
-	CAMERAVECTORMAP_MAP_ON,
+	CAMERAVECTORMAP_VIEWVECTOR_ON,
 	CAMERAVECTORMAP_REFLECTED_ON,
 	CAMERAVECTORMAP_INVERTED_ON,
+	CAMERAVECTORMAP_DIFFUSE_ON,
 	CAMERAVECTORMAP_OBSERVER_ON,
 	CAMERAVECTORMAP_MAP,
 };
@@ -39,13 +40,18 @@ static ParamBlockDesc2 cameravectormap_param_blk(gnormal_params, _T("params"), 0
 	p_subtexno, 0,
 	p_ui, TYPE_TEXMAPBUTTON, IDC_MAP,
 	p_end,
-	CAMERAVECTORMAP_MAP_ON, _T("mapEnabled"), TYPE_BOOL, 0, IDS_MAP_ON,
+	CAMERAVECTORMAP_VIEWVECTOR_ON, _T("mapEnabled"), TYPE_BOOL, 0, IDS_VIEWVECTOR_ON,
 	p_default, 2.2f,
 	p_range, 1.0f, 5.0f,
-	p_ui, TYPE_SINGLECHECKBOX, IDC_MAP_ON,
+	p_ui, TYPE_SINGLECHECKBOX, IDC_VIEWVECTOR_ON,
 	p_end,
 	//0, 0, NULL,
 	//params
+	CAMERAVECTORMAP_DIFFUSE_ON, _T("diffusionEnabled"), TYPE_BOOL, 0, IDS_DIFFUSE_ON,
+	p_default, 2.2f,
+	p_range, 1.0f, 5.0f,
+	p_ui, TYPE_SINGLECHECKBOX, IDC_DIFFUSE_ON,
+	p_end,
 	CAMERAVECTORMAP_REFLECTED_ON, _T("reflectionEnabled"), TYPE_BOOL, 0, IDS_REFLECTED_ON,
 	p_default, 2.2f,
 	p_range, 1.0f, 5.0f,
@@ -209,9 +215,10 @@ RefTargetHandle CameraVectorMap::Clone(RemapDir& remap) {
 	mnew->mapValid.SetEmpty();
 	mnew->mpSubTex = NULL;
 	mnew->mReflectedOn = mReflectedOn;
+	mnew->mDiffuseOn = mDiffuseOn;
 	mnew->mInvertedOn = mInvertedOn;
 	mnew->mObserverSpaceOn = mObserverSpaceOn;
-	mnew->mMapOn = mMapOn;
+	mnew->mViewVectorOn = mViewVectorOn;
 	//mnew->mReverseGamma = mReverseGamma;
 	//mnew->mSolidColor = mSolidColor;
 	//mnew->mGamma = mGamma;
@@ -250,9 +257,10 @@ void CameraVectorMap::Update(TimeValue t, Interval& valid) {
 	if (!ivalid.InInterval(t)) {
 		ivalid.SetInfinite();
 		//mpPblock->GetValue(CAMERAVECTORMAP_SOLID_COLOR, t, mSolidColor, ivalid);
-		mpPblock->GetValue(CAMERAVECTORMAP_MAP_ON, t, mMapOn, ivalid);
+		mpPblock->GetValue(CAMERAVECTORMAP_VIEWVECTOR_ON, t, mViewVectorOn, ivalid);
 		mpPblock->GetValue(CAMERAVECTORMAP_REFLECTED_ON, t, mReflectedOn, ivalid);
 		mpPblock->GetValue(CAMERAVECTORMAP_INVERTED_ON, t, mInvertedOn, ivalid);
+		mpPblock->GetValue(CAMERAVECTORMAP_DIFFUSE_ON, t, mDiffuseOn, ivalid);
 		mpPblock->GetValue(CAMERAVECTORMAP_OBSERVER_ON, t, mObserverSpaceOn, ivalid);
 		//mpPblock->GetValue(CAMERAVECTORMAP_GAMMA, t, mGamma, ivalid);
 		//mpPblock->GetValue(CAMERAVECTORMAP_GAIN, t, mGain, ivalid);
@@ -367,7 +375,7 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 	float oy = viewVector.y;
 	float oz = viewVector.z;
 
-	if (mMapOn) {
+	if (mViewVectorOn) {
 		retval.r = viewVector.x;
 		retval.g = viewVector.y;
 		retval.b = viewVector.z;
@@ -381,70 +389,95 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 		if (ld != nullptr) {
 			Color lightColor;
 			if (ld->Illuminate(sc, normalVector, lightColor, dir, dotL, diffuse)) {
-				
+
 				Point3 nDir = Normalize(dir);
 
-				if (mReflectedOn) {
-					//{-vx + 2*nx*(nx*vx + ny*vy + nz*vz),-vy + 2*ny*(nx*vx + ny*vy + nz*vz),-vz + 2*nz*(nx*vx + ny*vy + nz*vz)}
-					float vx = nDir.x;
-					float vy = nDir.y;
-					float vz = nDir.z;
+				float vx = nDir.x;
+				float vy = nDir.y;
+				float vz = nDir.z;
 
-					float nx = normalVector.x;
-					float ny = normalVector.y;
-					float nz = normalVector.z;
+				float nx = normalVector.x;
+				float ny = normalVector.y;
+				float nz = normalVector.z;
 
-					float rx = -vx + 2 * nx * (nx * vx + ny * vy + nz * vz);
-					float ry = -vy + 2 * ny * (nx * vx + ny * vy + nz * vz);
-					float rz = -vz + 2 * nz * (nx * vx + ny * vy + nz * vz);
+				if (mDiffuseOn) {
 
-					if (mObserverSpaceOn) {
+					float NormalDotView = (nx * vx + ny * vy + nz * vz);
 
-						float& cx = rx;
-						float& cy = ry;
-						float& cz = rz;
+					if (mpSubTex) {
+						Point3 oUVW;
 
-						float& ix = ox;
-						float& iy = oy;
-						float& iz = oz;
+						oUVW.x = NormalDotView;
+						oUVW.y = 0.5;
+						oUVW.z = 0.0f;
+						
 
-						float cx2 = cx * cx;
-						float cy2 = cy * cy;
-						float cz2 = cz * cz;
-
-						float obsx = (cy2 * ix + cx2 * cz * ix + cx * cy * (-1 + cz) * iy) / (cx2 + cy2) - cx * iz;
-						float obsy = (cx * cy * (-1 + cz) * ix + cx2 * iy + cy2 * cz * iy) / (cx2 + cy2) - cy * iz;
-						float obsz = cx * ix + cy * iy + cz * iz;
-
-						if (mpSubTex) {
-							Point3 oUVW;
-
-							oUVW.x = (float)(obsx + 1) / 2;
-							oUVW.y = (float)(obsy + 1) / 2;
-							oUVW.z = 0.0f;
-
-							scp.SetUVW(oUVW);
-							retval = mpSubTex->EvalColor(scp);
-						}
-						else 
-						{
-							retval.r = obsx;
-							retval.g = obsy;
-							retval.b = obsz;
-						}
+								scp.SetUVW(oUVW);
+								retval = mpSubTex->EvalColor(scp);
 					}
-					else 
-					{
-						retval.r = rx;
-						retval.g = ry;
-						retval.b = rz;
+					else {
+						retval.r = NormalDotView;
+						retval.g = NormalDotView;
+						retval.b = NormalDotView;
 					}
 				}
-				else 
-				{
-					retval.r = nDir.x;
-					retval.g = nDir.y;
-					retval.b = nDir.z;
+				else {
+
+					if (mReflectedOn) {
+						//{-vx + 2*nx*(nx*vx + ny*vy + nz*vz),-vy + 2*ny*(nx*vx + ny*vy + nz*vz),-vz + 2*nz*(nx*vx + ny*vy + nz*vz)}
+
+						float rx = -vx + 2 * nx * (nx * vx + ny * vy + nz * vz);
+						float ry = -vy + 2 * ny * (nx * vx + ny * vy + nz * vz);
+						float rz = -vz + 2 * nz * (nx * vx + ny * vy + nz * vz);
+
+						if (mObserverSpaceOn) {
+
+							float& cx = rx;
+							float& cy = ry;
+							float& cz = rz;
+
+							float& ix = ox;
+							float& iy = oy;
+							float& iz = oz;
+
+							float cx2 = cx * cx;
+							float cy2 = cy * cy;
+							float cz2 = cz * cz;
+
+							float obsx = (cy2 * ix + cx2 * cz * ix + cx * cy * (-1 + cz) * iy) / (cx2 + cy2) - cx * iz;
+							float obsy = (cx * cy * (-1 + cz) * ix + cx2 * iy + cy2 * cz * iy) / (cx2 + cy2) - cy * iz;
+							float obsz = cx * ix + cy * iy + cz * iz;
+
+							if (mpSubTex) {
+								Point3 oUVW;
+
+								oUVW.x = (float)(obsx + 1) / 2;
+								oUVW.y = (float)(obsy + 1) / 2;
+								oUVW.z = 0.0f;
+
+								scp.SetUVW(oUVW);
+								retval = mpSubTex->EvalColor(scp);
+							}
+							else
+							{
+								retval.r = obsx;
+								retval.g = obsy;
+								retval.b = obsz;
+							}
+						}
+						else
+						{
+							retval.r = rx;
+							retval.g = ry;
+							retval.b = rz;
+						}
+					}
+					else
+					{
+						retval.r = nDir.x;
+						retval.g = nDir.y;
+						retval.b = nDir.z;
+					}
 				}
 			}
 		}
