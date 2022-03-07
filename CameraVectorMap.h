@@ -9,10 +9,11 @@
 #include <Graphics/IShaderManager.h>
 #include "resource.h"
 
-#define NSUBTEX		1
+#define NSUBTEX		2
 #define PBLOCK_REF	0
-#define MAP_REF		1
-#define NUM_REFS	2
+#define NORMAL_REF	1
+#define MAP_REF		2
+#define NUM_REFS	3
 
 #define CAMERAVECTORMAP_CLASS_ID	Class_ID(0x571a6cf8, 0x1e1129d8)
 
@@ -55,7 +56,16 @@ public:
 
 	//-- From ISubMap
 	int NumSubTexmaps() { return NSUBTEX; }
-	Texmap* GetSubTexmap(int i) { return mpSubTex; }
+	Texmap* GetSubTexmap(int i) {
+		switch (i) {
+		case 0:
+			return mpNormalMap;
+			break;
+
+		default:
+			return mpSubTex;
+		}
+	}
 	void SetSubTexmap(int i, Texmap* m);
 	TSTR GetSubTexmapSlotName(int i, bool localized) override;
 
@@ -93,6 +103,7 @@ private:
 	virtual void SetReference(int i, RefTargetHandle rtarg);
 	IParamBlock2* mpPblock;	//ref 0
 	Texmap* mpSubTex;	//ref 1
+	Texmap* mpNormalMap;	//ref 2
 	Interval ivalid;
 	Interval mapValid;
 	BOOL mViewVectorOn;

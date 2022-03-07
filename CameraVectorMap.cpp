@@ -1,5 +1,6 @@
 #include "CameraVectorMap.h"
 #include "ShadeContextProxy.h"
+#include "quatRotation.h"
 
 using namespace MaxSDK::Graphics;
 
@@ -26,6 +27,7 @@ enum {
 	CAMERAVECTORMAP_INVERTED_ON,
 	CAMERAVECTORMAP_DIFFUSE_ON,
 	CAMERAVECTORMAP_OBSERVER_ON,
+	CAMERAVECTORMAP_NORMAL_MAP,
 	CAMERAVECTORMAP_MAP,
 };
 
@@ -34,6 +36,12 @@ static ParamBlockDesc2 cameravectormap_param_blk(gnormal_params, _T("params"), 0
 	IDD_PARAM_PANEL,
 	IDS_PARAMS,
 	0, 0, NULL,
+	//params
+	CAMERAVECTORMAP_NORMAL_MAP, _T("normalmap"), TYPE_TEXMAP, 0, IDS_NORMAL_MAP,
+	p_refno, 1,
+	p_subtexno, 0,
+	p_ui, TYPE_TEXMAPBUTTON, IDC_NORMAL_MAP,
+	p_end,
 	//params
 	CAMERAVECTORMAP_MAP, _T("map"), TYPE_TEXMAP, 0, IDS_MAP,
 	p_refno, 1,
@@ -84,6 +92,7 @@ MaxSDK::Graphics::IShaderManager* CameraVectorMap::GetShaderManager() {
 CameraVectorMap::CameraVectorMap() {
 	mpPblock = NULL;
 	mpSubTex = NULL;
+	mpNormalMap = NULL;
 	texHandle = NULL;
 	mpShaderManager = NULL;
 	CameraVectorMapDesc.MakeAutoParamBlocks(this);
@@ -122,6 +131,9 @@ Animatable* CameraVectorMap::SubAnim(int i) {
 	switch (i) {
 	case 0:
 		return mpPblock;
+
+	case 1:
+		return mpNormalMap;
 
 	default:
 		return mpSubTex;
@@ -171,6 +183,10 @@ RefTargetHandle CameraVectorMap::GetReference(int i) {
 	switch (i) {
 	case PBLOCK_REF:
 		return mpPblock;
+
+	case NORMAL_REF:
+		return mpNormalMap;
+
 	default:
 		return mpSubTex;
 	}
@@ -181,6 +197,11 @@ void CameraVectorMap::SetReference(int i, RefTargetHandle rtarg) {
 	case PBLOCK_REF:
 		mpPblock = (IParamBlock2*)rtarg;
 		break;
+
+	case NORMAL_REF:
+		mpNormalMap = (Texmap*)rtarg;
+		break;
+
 	default:
 		mpSubTex = (Texmap*)rtarg;
 		break;
@@ -214,6 +235,7 @@ RefTargetHandle CameraVectorMap::Clone(RemapDir& remap) {
 	mnew->ivalid.SetEmpty();
 	mnew->mapValid.SetEmpty();
 	mnew->mpSubTex = NULL;
+	mnew->mpNormalMap = NULL;
 	mnew->mReflectedOn = mReflectedOn;
 	mnew->mDiffuseOn = mDiffuseOn;
 	mnew->mInvertedOn = mInvertedOn;
@@ -227,6 +249,11 @@ RefTargetHandle CameraVectorMap::Clone(RemapDir& remap) {
 	if (mpSubTex) {
 		mnew->ReplaceReference(MAP_REF, remap.CloneRef(mpSubTex));
 	}
+
+	if (mpNormalMap) {
+		mnew->ReplaceReference(NORMAL_REF, remap.CloneRef(mpNormalMap));
+	}
+
 	BaseClone(this, mnew, remap);
 	return (RefTargetHandle)mnew;
 }
@@ -273,19 +300,37 @@ void CameraVectorMap::Update(TimeValue t, Interval& valid) {
 		if (mpSubTex) {
 			mpSubTex->Update(t, mapValid);
 		}
+		if (mpNormalMap) {
+			mpNormalMap->Update(t, mapValid);
+		}
 	}
 	valid &= mapValid;
 	valid &= ivalid;
 }
 
 void CameraVectorMap::SetSubTexmap(int i, Texmap* m) {
-	ReplaceReference(MAP_REF, m);
-	cameravectormap_param_blk.InvalidateUI(CAMERAVECTORMAP_MAP);
-	mapValid.SetEmpty();
+	switch (i) {
+	case 0:
+		ReplaceReference(NORMAL_REF, m);
+		cameravectormap_param_blk.InvalidateUI(CAMERAVECTORMAP_NORMAL_MAP);
+		mapValid.SetEmpty();
+		break;
+	default:
+		ReplaceReference(MAP_REF, m);
+		cameravectormap_param_blk.InvalidateUI(CAMERAVECTORMAP_MAP);
+		mapValid.SetEmpty();
+	}
 }
 
 TSTR CameraVectorMap::GetSubTexmapSlotName(int i, bool localized) {
-	return localized ? GetString(IDS_MAP) : _T("Map");
+	switch (i) {
+	case 0:
+		return localized ? GetString(IDS_NORMAL_MAP) : _T("Normal Map");
+		break;
+
+	default:
+		return localized ? GetString(IDS_MAP) : _T("Map");
+	}
 }
 
 DWORD_PTR CameraVectorMap::GetActiveTexHandle(TimeValue t, TexHandleMaker& thmaker) {
@@ -366,6 +411,27 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 	Point3 baryCoord = sc.BarycentricCoords();
 	Point3 viewVector = Normalize(sc.OrigView());
 	Point3 normalVector = sc.OrigNormal();
+
+	if (mpNormalMap) {
+
+		float &nx = normalVector.x;
+		float &ny = normalVector.y;
+		float &nz = normalVector.z;
+
+		AColor normalColor = mpNormalMap->EvalColor(sc);
+
+		float sx = normalColor.r;
+		float sy = normalColor.g;
+		float sz = normalColor.b;
+
+		float rx, ry, rz;
+
+		transformFromTangentSpaceToWorld( nx, ny, nz, sx, sy, sz, rx, ry, rz);
+
+		normalVector.x = rx;
+		normalVector.y = ry;
+		normalVector.z = rz;
+	}
 
 	retval.r = 0.0;
 	retval.g = 0.0;

@@ -7,16 +7,17 @@
 #define IDS_CLASS_NAME                  3
 #define IDS_PARAMS                      4
 #define IDD_PARAM_PANEL                 5
-#define IDS_MAP                         5
 #define IDS_OBSERVER_ON                 6
 #define IDS_GAMMA                       7
 #define IDS_INVERTED_ON                 7
 #define IDS_GAIN                        8
+#define IDS_NORMAL_MAP                  8
 #define IDS_VIEWVECTOR_ON               9
 #define IDS_REVERSE_GAMMA               10
 #define IDS_CLASS_NAME_IMP              11
 #define IDS_REFLECTED_ON                12
 #define IDS_DIFFUSE_ON                  13
+#define IDS_MAP                         14
 #define IDC_SOLID_COLOR                 1002
 #define IDC_VIEWVECTOR_ON               1003
 #define IDC_REFLECTED_ON                1004
@@ -26,6 +27,7 @@
 #define IDC_DIFFUSE_ON                  1007
 #define IDC_MAP                         1008
 #define IDC_GAIN_EDIT                   1009
+#define IDC_NORMAL_MAP                  1009
 #define IDC_REVERSE_GAMMA               1010
 #define IDC_CUSTOM1                     1011
 
