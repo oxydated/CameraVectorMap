@@ -50,25 +50,27 @@ END
 // Dialog
 //
 
-IDD_PARAM_PANEL DIALOGEX 0, 0, 209, 180
+IDD_PARAM_PANEL DIALOGEX 0, 0, 209, 186
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_VISIBLE
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    GROUPBOX        "Color / Gamma / Gain",IDC_STATIC,19,15,174,148
-    LTEXT           "Light or Observer?",IDC_STATIC,35,30,60,8
-    CONTROL         "",IDC_VIEWVECTOR_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,29,11,10
-    LTEXT           "Reflected?",IDC_STATIC,35,62,35,8
-    CONTROL         "",IDC_REFLECTED_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,61,11,10
-    LTEXT           "Inverted?",IDC_STATIC,35,78,32,8
-    CONTROL         "",IDC_INVERTED_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,77,11,10
-    LTEXT           "Observer Space?",IDC_STATIC,35,94,56,8
-    CONTROL         "",IDC_OBSERVER_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,93,11,10
-    LTEXT           "Map:",IDC_STATIC,36,111,17,8
+    GROUPBOX        "Color / Gamma / Gain",IDC_STATIC,19,15,174,155
+    LTEXT           "Light or Observer?",IDC_STATIC,34,30,60,8
+    CONTROL         "",IDC_VIEWVECTOR_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,29,11,10
+    LTEXT           "Reflected?",IDC_STATIC,34,62,35,8
+    CONTROL         "",IDC_REFLECTED_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,61,11,10
+    LTEXT           "Inverted?",IDC_STATIC,34,78,32,8
+    CONTROL         "",IDC_INVERTED_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,77,11,10
+    LTEXT           "Observer Space?",IDC_STATIC,34,94,56,8
+    CONTROL         "",IDC_OBSERVER_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,93,11,10
+    LTEXT           "Map:",IDC_STATIC,34,111,17,8
     CONTROL         "Custom1",IDC_MAP,"CustButton",WS_TABSTOP,60,109,114,14
-    LTEXT           "Diffuse?",IDC_STATIC,35,46,27,8
-    CONTROL         "",IDC_DIFFUSE_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,98,45,11,10
-    LTEXT           "Normal Map:",IDC_STATIC,36,131,41,8
+    LTEXT           "Diffuse?",IDC_STATIC,34,46,27,8
+    CONTROL         "",IDC_DIFFUSE_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,45,11,10
+    LTEXT           "Normal Map:",IDC_STATIC,34,131,41,8
     CONTROL         "Custom1",IDC_NORMAL_MAP,"CustButton",WS_TABSTOP,81,129,93,14
+    LTEXT           "Tangent Space NM?",IDC_STATIC,34,151,64,8
+    CONTROL         "",IDC_NORMAL_MAP_TANGENT_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,150,11,10
 END
 
 
@@ -85,7 +87,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 202
         TOPMARGIN, 7
-        BOTTOMMARGIN, 173
+        BOTTOMMARGIN, 179
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -123,6 +125,7 @@ BEGIN
     IDS_REFLECTED_ON        "Reflected or Incident"
     IDS_DIFFUSE_ON          "Diffuse"
     IDS_MAP                 "Map"
+    IDS_NORMAL_MAP_TANGENT_ON "Normal Map in Tangent Space"
 END
 
 #endif    // Portuguese (Brazil) resources

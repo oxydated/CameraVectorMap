@@ -104,6 +104,7 @@ private:
 	IParamBlock2* mpPblock;	//ref 0
 	Texmap* mpSubTex;	//ref 1
 	Texmap* mpNormalMap;	//ref 2
+	BOOL mNormalMapTangentOn;
 	Interval ivalid;
 	Interval mapValid;
 	BOOL mViewVectorOn;

@@ -28,6 +28,7 @@ enum {
 	CAMERAVECTORMAP_DIFFUSE_ON,
 	CAMERAVECTORMAP_OBSERVER_ON,
 	CAMERAVECTORMAP_NORMAL_MAP,
+	CAMERAVECTORMAP_NORMAL_MAP_TANGENT_ON,
 	CAMERAVECTORMAP_MAP,
 };
 
@@ -41,6 +42,12 @@ static ParamBlockDesc2 cameravectormap_param_blk(gnormal_params, _T("params"), 0
 	p_refno, 1,
 	p_subtexno, 0,
 	p_ui, TYPE_TEXMAPBUTTON, IDC_NORMAL_MAP,
+	p_end,
+	//params
+	CAMERAVECTORMAP_NORMAL_MAP_TANGENT_ON, _T("normalmapTangentOn"), TYPE_BOOL, 0, IDS_NORMAL_MAP_TANGENT_ON,
+	p_default, 2.2f,
+	p_range, 1.0f, 5.0f,
+	p_ui, TYPE_SINGLECHECKBOX, IDC_NORMAL_MAP_TANGENT_ON,
 	p_end,
 	//params
 	CAMERAVECTORMAP_MAP, _T("map"), TYPE_TEXMAP, 0, IDS_MAP,
@@ -241,6 +248,7 @@ RefTargetHandle CameraVectorMap::Clone(RemapDir& remap) {
 	mnew->mInvertedOn = mInvertedOn;
 	mnew->mObserverSpaceOn = mObserverSpaceOn;
 	mnew->mViewVectorOn = mViewVectorOn;
+	mnew->mNormalMapTangentOn = mNormalMapTangentOn;
 	//mnew->mReverseGamma = mReverseGamma;
 	//mnew->mSolidColor = mSolidColor;
 	//mnew->mGamma = mGamma;
@@ -289,6 +297,7 @@ void CameraVectorMap::Update(TimeValue t, Interval& valid) {
 		mpPblock->GetValue(CAMERAVECTORMAP_INVERTED_ON, t, mInvertedOn, ivalid);
 		mpPblock->GetValue(CAMERAVECTORMAP_DIFFUSE_ON, t, mDiffuseOn, ivalid);
 		mpPblock->GetValue(CAMERAVECTORMAP_OBSERVER_ON, t, mObserverSpaceOn, ivalid);
+		mpPblock->GetValue(CAMERAVECTORMAP_NORMAL_MAP_TANGENT_ON, t, mNormalMapTangentOn, ivalid);
 		//mpPblock->GetValue(CAMERAVECTORMAP_GAMMA, t, mGamma, ivalid);
 		//mpPblock->GetValue(CAMERAVECTORMAP_GAIN, t, mGain, ivalid);
 		//mpPblock->GetValue(CAMERAVECTORMAP_REVERSE_GAMMA, t, mReverseGamma, ivalid);
@@ -403,10 +412,14 @@ BITMAPINFO* CameraVectorMap::GetVPDisplayDIB(TimeValue t, TexHandleMaker& thmake
 
 AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 	AColor retval;
+
+	retval.r = 0.0;
+	retval.g = 0.0;
+	retval.b = 0.0;
+
 	float gamma = 1.0;
 
 	ShadeContextProxy scp(sc);
-
 
 	Point3 baryCoord = sc.BarycentricCoords();
 	Point3 viewVector = Normalize(sc.OrigView());
@@ -414,9 +427,9 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 	if (mpNormalMap) {
 
-		float &nx = normalVector.x;
-		float &ny = normalVector.y;
-		float &nz = normalVector.z;
+		float& nx = normalVector.x;
+		float& ny = normalVector.y;
+		float& nz = normalVector.z;
 
 		AColor normalColor = mpNormalMap->EvalColor(sc);
 
@@ -426,16 +439,20 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 		float rx, ry, rz;
 
-		transformFromTangentSpaceToWorld( nx, ny, nz, sx, sy, sz, rx, ry, rz);
+		if (mNormalMapTangentOn)
+		{
+			transformFromTangentSpaceToWorld(nx, ny, nz, sx, sy, sz, rx, ry, rz);
 
-		normalVector.x = rx;
-		normalVector.y = ry;
-		normalVector.z = rz;
+			normalVector.x = rx;
+			normalVector.y = ry;
+			normalVector.z = rz;
+		}
+		else {
+			normalVector.x = sx;
+			normalVector.y = sy;
+			normalVector.z = sz;
+		}
 	}
-
-	retval.r = 0.0;
-	retval.g = 0.0;
-	retval.b = 0.0;
 
 	float ox = viewVector.x;
 	float oy = viewVector.y;
