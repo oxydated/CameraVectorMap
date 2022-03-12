@@ -423,7 +423,7 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 	Point3 baryCoord = sc.BarycentricCoords();
 	Point3 viewVector = Normalize(sc.OrigView());
-	Point3 normalVector = sc.OrigNormal();
+	Point3 normalVector = sc.Normal();
 
 	if (mpNormalMap) {
 
@@ -433,9 +433,9 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 		AColor normalColor = mpNormalMap->EvalColor(sc);
 
-		float sx = normalColor.r;
-		float sy = normalColor.g;
-		float sz = normalColor.b;
+		float sx = 2 * normalColor.r - 1.0;
+		float sy = 2 * normalColor.g - 1.0;
+		float sz = 2 * normalColor.b - 1.0;
 
 		float rx, ry, rz;
 
@@ -448,9 +448,14 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 			normalVector.z = rz;
 		}
 		else {
-			normalVector.x = sx;
-			normalVector.y = sy;
-			normalVector.z = sz;
+			Point3 normalWorld(sx, sy, sz);
+
+			normalVector = sc.VectorFromNoScale(normalWorld, REF_OBJECT);
+
+
+			//normalVector.x = sx;
+			//normalVector.y = sy;
+			//normalVector.z = sz;
 		}
 	}
 
@@ -459,9 +464,9 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 	float oz = viewVector.z;
 
 	if (mViewVectorOn) {
-		retval.r = viewVector.x;
-		retval.g = viewVector.y;
-		retval.b = viewVector.z;
+		retval.r = normalVector.x;
+		retval.g = normalVector.y;
+		retval.b = normalVector.z;
 	}
 	else 
 	{
@@ -490,7 +495,7 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 					if (mpSubTex) {
 						Point3 oUVW;
 
-						oUVW.x = NormalDotView;
+						oUVW.x = NormalDotView * 0.8 + 0.1;
 						oUVW.y = 0.5;
 						oUVW.z = 0.0f;
 						
