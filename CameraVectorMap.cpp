@@ -421,6 +421,43 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 	ShadeContextProxy scp(sc);
 
+	Point3 u0(0.01f, 0.5f, 0.0f);
+	Point3 u1(0.99f, 0.5f, 0.0f);
+	Point3 uMiddle(0.5f, 0.5f, 0.0f);
+
+	AColor colorAtU0;
+	AColor colorAtU1;
+	AColor colorAtUMiddle;
+
+	bool diffuseRGreater;
+	bool diffuseGGreater;
+	bool diffuseBGreater;
+
+	bool specularRGreater;
+	bool specularGGreater;
+	bool specularBGreater;
+
+	if (mpSubTex) {
+		scp.SetUVW(u0);
+		colorAtU0 = mpSubTex->EvalColor(scp);
+		scp.SetUVW(u1);
+		colorAtU1 = mpSubTex->EvalColor(scp);
+		scp.SetUVW(uMiddle);
+		colorAtUMiddle = mpSubTex->EvalColor(scp);
+
+		diffuseRGreater = colorAtU0.r < colorAtU1.r;
+		diffuseGGreater = colorAtU0.g < colorAtU1.g;
+		diffuseBGreater = colorAtU0.b < colorAtU1.b;
+
+		specularRGreater = colorAtU0.r < colorAtUMiddle.r;
+		specularGGreater = colorAtU0.g < colorAtUMiddle.g;
+		specularBGreater = colorAtU0.b < colorAtUMiddle.b;
+
+		retval.r = colorAtU0.r;
+		retval.g = colorAtU0.g;
+		retval.b = colorAtU0.b;
+	}
+
 	Point3 baryCoord = sc.BarycentricCoords();
 	Point3 viewVector = Normalize(sc.OrigView());
 	Point3 normalVector = sc.Normal();
@@ -473,102 +510,161 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 		Point3 dir;
 		float dotL;
 		float diffuse;
-		LightDesc* ld = sc.Light(0);
-		if (ld != nullptr) {
-			Color lightColor;
-			if (ld->Illuminate(sc, normalVector, lightColor, dir, dotL, diffuse)) {
 
-				Point3 nDir = Normalize(dir);
+		Point3 maxUVW(-2.0f, -2.0f, 0.0f);
 
-				float vx = nDir.x;
-				float vy = nDir.y;
-				float vz = nDir.z;
+		bool receivesLight = false;
 
-				float nx = normalVector.x;
-				float ny = normalVector.y;
-				float nz = normalVector.z;
+		for (int i = 0; i < sc.nLights; i++) {
+			LightDesc* ld = sc.Light(i);
+			if (ld != nullptr) {
+				Color lightColor;
+				if (ld->Illuminate(sc, normalVector, lightColor, dir, dotL, diffuse)) {
 
-				if (mDiffuseOn) {
+					receivesLight = true;
 
-					float NormalDotView = (nx * vx + ny * vy + nz * vz);
+					Point3 nDir = Normalize(dir);
 
-					if (mpSubTex) {
-						Point3 oUVW;
+					float vx = nDir.x;
+					float vy = nDir.y;
+					float vz = nDir.z;
 
-						oUVW.x = NormalDotView * 0.8 + 0.1;
-						oUVW.y = 0.5;
-						oUVW.z = 0.0f;
-						
+					float nx = normalVector.x;
+					float ny = normalVector.y;
+					float nz = normalVector.z;
 
-								scp.SetUVW(oUVW);
-								retval = mpSubTex->EvalColor(scp);
+					if (mDiffuseOn) {
+
+						float NormalDotView = (nx * vx + ny * vy + nz * vz);
+
+						if (mpSubTex) {
+							Point3 oUVW;
+							float toClamp = 0.0;
+
+							toClamp = NormalDotView * 0.8 + 0.1;
+							oUVW.x = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
+							oUVW.y = 0.5;
+							oUVW.z = 0.0f;
+
+							//if (oUVW.x > maxUVW.x) {
+							//	maxUVW = oUVW;
+							//}
+							//scp.SetUVW(maxUVW);
+
+							scp.SetUVW(oUVW);
+							AColor tempVal = mpSubTex->EvalColor(scp);
+
+							retval.r = diffuseRGreater ?
+								(tempVal.r > retval.r ? tempVal.r : retval.r) :
+								(tempVal.r < retval.r ? tempVal.r : retval.r);
+
+							retval.g = diffuseGGreater ?
+								(tempVal.g > retval.g ? tempVal.g : retval.g) :
+								(tempVal.g < retval.g ? tempVal.g : retval.g);
+
+							retval.b = diffuseBGreater ?
+								(tempVal.b > retval.b ? tempVal.b : retval.b) :
+								(tempVal.b < retval.b ? tempVal.b : retval.b);
+						}
+						else {
+							retval.r = NormalDotView;
+							retval.g = NormalDotView;
+							retval.b = NormalDotView;
+						}
 					}
 					else {
-						retval.r = NormalDotView;
-						retval.g = NormalDotView;
-						retval.b = NormalDotView;
-					}
-				}
-				else {
 
-					if (mReflectedOn) {
-						//{-vx + 2*nx*(nx*vx + ny*vy + nz*vz),-vy + 2*ny*(nx*vx + ny*vy + nz*vz),-vz + 2*nz*(nx*vx + ny*vy + nz*vz)}
+						if (mReflectedOn) {
+							//{-vx + 2*nx*(nx*vx + ny*vy + nz*vz),-vy + 2*ny*(nx*vx + ny*vy + nz*vz),-vz + 2*nz*(nx*vx + ny*vy + nz*vz)}
 
-						float rx = -vx + 2 * nx * (nx * vx + ny * vy + nz * vz);
-						float ry = -vy + 2 * ny * (nx * vx + ny * vy + nz * vz);
-						float rz = -vz + 2 * nz * (nx * vx + ny * vy + nz * vz);
+							float rx = -vx + 2 * nx * (nx * vx + ny * vy + nz * vz);
+							float ry = -vy + 2 * ny * (nx * vx + ny * vy + nz * vz);
+							float rz = -vz + 2 * nz * (nx * vx + ny * vy + nz * vz);
 
-						if (mObserverSpaceOn) {
+							if (mObserverSpaceOn) {
 
-							float& cx = rx;
-							float& cy = ry;
-							float& cz = rz;
+								float& cx = rx;
+								float& cy = ry;
+								float& cz = rz;
 
-							float& ix = ox;
-							float& iy = oy;
-							float& iz = oz;
+								float& ix = ox;
+								float& iy = oy;
+								float& iz = oz;
 
-							float cx2 = cx * cx;
-							float cy2 = cy * cy;
-							float cz2 = cz * cz;
+								float cx2 = cx * cx;
+								float cy2 = cy * cy;
+								float cz2 = cz * cz;
 
-							float obsx = (cy2 * ix + cx2 * cz * ix + cx * cy * (-1 + cz) * iy) / (cx2 + cy2) - cx * iz;
-							float obsy = (cx * cy * (-1 + cz) * ix + cx2 * iy + cy2 * cz * iy) / (cx2 + cy2) - cy * iz;
-							float obsz = cx * ix + cy * iy + cz * iz;
+								float obsx = (cy2 * ix + cx2 * cz * ix + cx * cy * (-1 + cz) * iy) / (cx2 + cy2) - cx * iz;
+								float obsy = (cx * cy * (-1 + cz) * ix + cx2 * iy + cy2 * cz * iy) / (cx2 + cy2) - cy * iz;
+								float obsz = cx * ix + cy * iy + cz * iz;
 
-							if (mpSubTex) {
-								Point3 oUVW;
+								if (mpSubTex) {
+									Point3 oUVW;
+									float toClamp = 0.0;
 
-								oUVW.x = (float)(obsx + 1) / 2;
-								oUVW.y = (float)(obsy + 1) / 2;
-								oUVW.z = 0.0f;
+									toClamp = (float)(obsx + 1) / 2;
+									oUVW.x = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
 
-								scp.SetUVW(oUVW);
-								retval = mpSubTex->EvalColor(scp);
+									toClamp = (float)(obsy + 1) / 2;
+									oUVW.y = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
+									oUVW.z = 0.0f;
+
+									//float sqrRadius = pow(oUVW.x - 0.5, 2.0) + pow(oUVW.x - 0.5, 2.0);
+									//float sqrRadiusMax = pow(maxUVW.x - 0.5, 2.0) + pow(maxUVW.x - 0.5, 2.0);
+
+									//if (sqrRadius < sqrRadiusMax) {
+									//	maxUVW = oUVW;
+									//}
+
+									//scp.SetUVW(maxUVW);
+
+									scp.SetUVW(oUVW);
+									AColor tempVal = mpSubTex->EvalColor(scp);
+
+									retval.r = specularRGreater ?
+										(tempVal.r > retval.r ? tempVal.r : retval.r) :
+										(tempVal.r < retval.r ? tempVal.r : retval.r);
+
+									retval.g = specularGGreater ?
+										(tempVal.g > retval.g ? tempVal.g : retval.g) :
+										(tempVal.g < retval.g ? tempVal.g : retval.g);
+
+									retval.b = specularBGreater ?
+										(tempVal.b > retval.b ? tempVal.b : retval.b) :
+										(tempVal.b < retval.b ? tempVal.b : retval.b);									
+								}
+								else
+								{
+									retval.r = obsx;
+									retval.g = obsy;
+									retval.b = obsz;
+								}
 							}
 							else
 							{
-								retval.r = obsx;
-								retval.g = obsy;
-								retval.b = obsz;
+								retval.r = rx;
+								retval.g = ry;
+								retval.b = rz;
 							}
 						}
 						else
 						{
-							retval.r = rx;
-							retval.g = ry;
-							retval.b = rz;
+							retval.r = nDir.x;
+							retval.g = nDir.y;
+							retval.b = nDir.z;
 						}
-					}
-					else
-					{
-						retval.r = nDir.x;
-						retval.g = nDir.y;
-						retval.b = nDir.z;
 					}
 				}
 			}
 		}
+		//if ((!receivesLight) && mpSubTex && (mDiffuseOn || mObserverSpaceOn)) {
+
+		//	Point3 noLight(0.0f, 0.0f, 0.0f);
+
+		//	scp.SetUVW(noLight);
+		//	retval = mpSubTex->EvalColor(scp);
+		//}
 
 	}
 
