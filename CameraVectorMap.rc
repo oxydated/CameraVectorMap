@@ -50,11 +50,11 @@ END
 // Dialog
 //
 
-IDD_PARAM_PANEL DIALOGEX 0, 0, 209, 186
+IDD_PARAM_PANEL DIALOGEX 0, 0, 209, 210
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_VISIBLE
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    GROUPBOX        "Color / Gamma / Gain",IDC_STATIC,19,15,174,155
+    GROUPBOX        "Color / Gamma / Gain",IDC_STATIC,19,15,174,179
     LTEXT           "Light or Observer?",IDC_STATIC,34,30,60,8
     CONTROL         "",IDC_VIEWVECTOR_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,29,11,10
     LTEXT           "Reflected?",IDC_STATIC,34,62,35,8
@@ -71,6 +71,8 @@ BEGIN
     CONTROL         "Custom1",IDC_NORMAL_MAP,"CustButton",WS_TABSTOP,81,129,93,14
     LTEXT           "Tangent Space NM?",IDC_STATIC,34,151,64,8
     CONTROL         "",IDC_NORMAL_MAP_TANGENT_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,150,11,10
+    LTEXT           "Cube Map:",IDC_STATIC,34,168,36,8
+    CONTROL         "Custom1",IDC_CUBE_MAP,"CustButton",WS_TABSTOP,81,166,93,14
 END
 
 
@@ -87,7 +89,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 202
         TOPMARGIN, 7
-        BOTTOMMARGIN, 179
+        BOTTOMMARGIN, 203
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -126,6 +128,11 @@ BEGIN
     IDS_DIFFUSE_ON          "Diffuse"
     IDS_MAP                 "Map"
     IDS_NORMAL_MAP_TANGENT_ON "Normal Map in Tangent Space"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_CUBE_MAP            "Cube Map"
 END
 
 #endif    // Portuguese (Brazil) resources

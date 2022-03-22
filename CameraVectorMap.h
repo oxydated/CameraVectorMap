@@ -9,11 +9,12 @@
 #include <Graphics/IShaderManager.h>
 #include "resource.h"
 
-#define NSUBTEX		2
+#define NSUBTEX		3
 #define PBLOCK_REF	0
 #define NORMAL_REF	1
 #define MAP_REF		2
-#define NUM_REFS	3
+#define CUBEMAP_REF	3
+#define NUM_REFS	4
 
 #define CAMERAVECTORMAP_CLASS_ID	Class_ID(0x571a6cf8, 0x1e1129d8)
 
@@ -61,9 +62,12 @@ public:
 		case 0:
 			return mpNormalMap;
 			break;
+		case 1:
+			return mpSubTex;
+			break;
 
 		default:
-			return mpSubTex;
+			return mpCubeMap;
 		}
 	}
 	void SetSubTexmap(int i, Texmap* m);
@@ -104,6 +108,7 @@ private:
 	IParamBlock2* mpPblock;	//ref 0
 	Texmap* mpSubTex;	//ref 1
 	Texmap* mpNormalMap;	//ref 2
+	Texmap* mpCubeMap; //ref3
 	BOOL mNormalMapTangentOn;
 	Interval ivalid;
 	Interval mapValid;

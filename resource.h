@@ -19,6 +19,7 @@
 #define IDS_DIFFUSE_ON                  13
 #define IDS_MAP                         14
 #define IDS_NORMAL_MAP_TANGENT_ON       15
+#define IDS_CUBE_MAP                    16
 #define IDC_SOLID_COLOR                 1002
 #define IDC_VIEWVECTOR_ON               1003
 #define IDC_REFLECTED_ON                1004
@@ -30,6 +31,8 @@
 #define IDC_GAIN_EDIT                   1009
 #define IDC_NORMAL_MAP                  1009
 #define IDC_REVERSE_GAMMA               1010
+#define IDC_NORMAL_MAP2                 1010
+#define IDC_CUBE_MAP                    1010
 #define IDC_CUSTOM1                     1011
 #define IDC_NORMAL_MAP_TANGENT_ON       1011
 

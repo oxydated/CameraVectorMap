@@ -30,6 +30,7 @@ enum {
 	CAMERAVECTORMAP_NORMAL_MAP,
 	CAMERAVECTORMAP_NORMAL_MAP_TANGENT_ON,
 	CAMERAVECTORMAP_MAP,
+	CAMERAVECTORMAP_CUBE_MAP,
 };
 
 static ParamBlockDesc2 cameravectormap_param_blk(gnormal_params, _T("params"), 0, &CameraVectorMapDesc, P_AUTO_CONSTRUCT + P_AUTO_UI, PBLOCK_REF,
@@ -37,6 +38,12 @@ static ParamBlockDesc2 cameravectormap_param_blk(gnormal_params, _T("params"), 0
 	IDD_PARAM_PANEL,
 	IDS_PARAMS,
 	0, 0, NULL,
+	//params
+	CAMERAVECTORMAP_CUBE_MAP, _T("cubemap"), TYPE_TEXMAP, 0, IDS_CUBE_MAP,
+	p_refno, 1,
+	p_subtexno, 0,
+	p_ui, TYPE_TEXMAPBUTTON, IDC_CUBE_MAP,
+	p_end,
 	//params
 	CAMERAVECTORMAP_NORMAL_MAP, _T("normalmap"), TYPE_TEXMAP, 0, IDS_NORMAL_MAP,
 	p_refno, 1,
@@ -100,6 +107,7 @@ CameraVectorMap::CameraVectorMap() {
 	mpPblock = NULL;
 	mpSubTex = NULL;
 	mpNormalMap = NULL;
+	mpCubeMap = NULL;
 	texHandle = NULL;
 	mpShaderManager = NULL;
 	CameraVectorMapDesc.MakeAutoParamBlocks(this);
@@ -142,8 +150,11 @@ Animatable* CameraVectorMap::SubAnim(int i) {
 	case 1:
 		return mpNormalMap;
 
-	default:
+	case 2:
 		return mpSubTex;
+
+	default:
+		return mpCubeMap;
 	}
 }
 
@@ -194,6 +205,9 @@ RefTargetHandle CameraVectorMap::GetReference(int i) {
 	case NORMAL_REF:
 		return mpNormalMap;
 
+	case CUBEMAP_REF:
+		return mpCubeMap;
+
 	default:
 		return mpSubTex;
 	}
@@ -207,6 +221,10 @@ void CameraVectorMap::SetReference(int i, RefTargetHandle rtarg) {
 
 	case NORMAL_REF:
 		mpNormalMap = (Texmap*)rtarg;
+		break;
+
+	case CUBEMAP_REF:
+		mpCubeMap = (Texmap*)rtarg;
 		break;
 
 	default:
@@ -243,6 +261,7 @@ RefTargetHandle CameraVectorMap::Clone(RemapDir& remap) {
 	mnew->mapValid.SetEmpty();
 	mnew->mpSubTex = NULL;
 	mnew->mpNormalMap = NULL;
+	mnew->mpCubeMap = NULL;
 	mnew->mReflectedOn = mReflectedOn;
 	mnew->mDiffuseOn = mDiffuseOn;
 	mnew->mInvertedOn = mInvertedOn;
@@ -260,6 +279,10 @@ RefTargetHandle CameraVectorMap::Clone(RemapDir& remap) {
 
 	if (mpNormalMap) {
 		mnew->ReplaceReference(NORMAL_REF, remap.CloneRef(mpNormalMap));
+	}
+
+	if (mpCubeMap) {
+		mnew->ReplaceReference(CUBEMAP_REF, remap.CloneRef(mpCubeMap));
 	}
 
 	BaseClone(this, mnew, remap);
@@ -312,6 +335,9 @@ void CameraVectorMap::Update(TimeValue t, Interval& valid) {
 		if (mpNormalMap) {
 			mpNormalMap->Update(t, mapValid);
 		}
+		if (mpCubeMap) {
+			mpCubeMap->Update(t, mapValid);
+		}
 	}
 	valid &= mapValid;
 	valid &= ivalid;
@@ -324,9 +350,14 @@ void CameraVectorMap::SetSubTexmap(int i, Texmap* m) {
 		cameravectormap_param_blk.InvalidateUI(CAMERAVECTORMAP_NORMAL_MAP);
 		mapValid.SetEmpty();
 		break;
-	default:
+	case 1:
 		ReplaceReference(MAP_REF, m);
 		cameravectormap_param_blk.InvalidateUI(CAMERAVECTORMAP_MAP);
+		mapValid.SetEmpty();
+		break;
+	default:
+		ReplaceReference(CUBEMAP_REF, m);
+		cameravectormap_param_blk.InvalidateUI(CAMERAVECTORMAP_CUBE_MAP);
 		mapValid.SetEmpty();
 	}
 }
@@ -337,8 +368,12 @@ TSTR CameraVectorMap::GetSubTexmapSlotName(int i, bool localized) {
 		return localized ? GetString(IDS_NORMAL_MAP) : _T("Normal Map");
 		break;
 
-	default:
+	case 1:
 		return localized ? GetString(IDS_MAP) : _T("Map");
+		break;
+
+	default:
+		return localized ? GetString(IDS_CUBE_MAP) : _T("Cube Map");
 	}
 }
 
@@ -515,156 +550,234 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 		bool receivesLight = false;
 
-		for (int i = 0; i < sc.nLights; i++) {
-			LightDesc* ld = sc.Light(i);
-			if (ld != nullptr) {
-				Color lightColor;
-				if (ld->Illuminate(sc, normalVector, lightColor, dir, dotL, diffuse)) {
+		if (mpCubeMap) {
 
-					receivesLight = true;
+			Point3 normalWorld = scp.VectorToNoScale(normalVector, REF_WORLD);
 
-					Point3 nDir = Normalize(dir);
+			float nx = normalWorld.x;
+			float ny = normalWorld.y;
+			float nz = normalWorld.z;
+			float u, v;
+			float uOff, vOff;
 
-					float vx = nDir.x;
-					float vy = nDir.y;
-					float vz = nDir.z;
+			if (nx > ny && nx >= -ny && nx > nz && nx >= -nz) {
+				//nx=1
+				v = ny / nx;
+				u = -nz / nx;
+				uOff = 2.;
+				vOff = 1.;
+			}
 
-					float nx = normalVector.x;
-					float ny = normalVector.y;
-					float nz = normalVector.z;
+			if (ny >= nx && ny > -nx && ny >= nz && ny > -nz) {
+				u = nx / ny;
+				//ny=1
+				v = -nz / ny;
+				uOff = 1.;
+				vOff = 2.;
+			}
 
-					if (mDiffuseOn) {
+			if (nz >= nx && nz > -nx && nz > ny && nz >= -ny) {
 
-						float NormalDotView = (nx * vx + ny * vy + nz * vz);
+				u = nx / nz;
+				v = ny / nz;
+				//nz=1
+				uOff = 1.;
+				vOff = 1.;
+			}
 
-						if (mpSubTex) {
-							Point3 oUVW;
-							float toClamp = 0.0;
+			if (-nx >= ny && -nx > -ny && -nx >= nz && -nx > -nz) {
 
-							toClamp = NormalDotView * 0.8 + 0.1;
-							oUVW.x = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
-							oUVW.y = 0.5;
-							oUVW.z = 0.0f;
+				//nx=- 1
+				v = -(ny / nx);
+				u = -(nz / nx);
+				uOff = 0.;
+				vOff = 1.;
+			}
 
-							//if (oUVW.x > maxUVW.x) {
-							//	maxUVW = oUVW;
-							//}
-							//scp.SetUVW(maxUVW);
+			if (-ny > nx && -ny >= -nx && -ny > nz && -ny >= -nz) {
 
-							scp.SetUVW(oUVW);
-							AColor tempVal = mpSubTex->EvalColor(scp);
+				u = -(nx / ny);
+				//ny=- 1
+				v = -(nz / ny);
+				uOff = 1.;
+				vOff = 0.;
+			}
 
-							retval.r = diffuseRGreater ?
-								(tempVal.r > retval.r ? tempVal.r : retval.r) :
-								(tempVal.r < retval.r ? tempVal.r : retval.r);
+			if (-nz > nx && -nz >= -nx && -nz >= ny && -nz > -ny) {
 
-							retval.g = diffuseGGreater ?
-								(tempVal.g > retval.g ? tempVal.g : retval.g) :
-								(tempVal.g < retval.g ? tempVal.g : retval.g);
+				u = (nx / nz);
+				v = -(ny / nz);
+				//nz=- 1
+				uOff = 3.;
+				vOff = 1.;
+			}
 
-							retval.b = diffuseBGreater ?
-								(tempVal.b > retval.b ? tempVal.b : retval.b) :
-								(tempVal.b < retval.b ? tempVal.b : retval.b);
+			Point3 oUVW;
+			float toClamp = 0.0;
+
+			toClamp = (float)(u + 1) / 2;
+			oUVW.x = (1. / 4.) * ((toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp)) + uOff);
+
+			toClamp = (float)(v + 1) / 2;
+			oUVW.y = (1. / 3.) * ((toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp)) + vOff);
+			oUVW.z = 0.0f;
+
+			scp.SetUVW(oUVW);
+			retval = mpCubeMap->EvalColor(scp);
+		}
+		else {
+
+			for (int i = 0; i < sc.nLights; i++) {
+				LightDesc* ld = sc.Light(i);
+				if (ld != nullptr) {
+					Color lightColor;
+					if (ld->Illuminate(sc, normalVector, lightColor, dir, dotL, diffuse)) {
+
+						receivesLight = true;
+
+						Point3 nDir = Normalize(dir);
+
+						float vx = nDir.x;
+						float vy = nDir.y;
+						float vz = nDir.z;
+
+						float nx = normalVector.x;
+						float ny = normalVector.y;
+						float nz = normalVector.z;
+
+						if (mDiffuseOn) {
+
+							float NormalDotView = (nx * vx + ny * vy + nz * vz);
+
+							if (mpSubTex) {
+								Point3 oUVW;
+								float toClamp = 0.0;
+
+								toClamp = NormalDotView * 0.8 + 0.1;
+								oUVW.x = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
+								oUVW.y = 0.5;
+								oUVW.z = 0.0f;
+
+								//if (oUVW.x > maxUVW.x) {
+								//	maxUVW = oUVW;
+								//}
+								//scp.SetUVW(maxUVW);
+
+								scp.SetUVW(oUVW);
+								AColor tempVal = mpSubTex->EvalColor(scp);
+
+								retval.r = diffuseRGreater ?
+									(tempVal.r > retval.r ? tempVal.r : retval.r) :
+									(tempVal.r < retval.r ? tempVal.r : retval.r);
+
+								retval.g = diffuseGGreater ?
+									(tempVal.g > retval.g ? tempVal.g : retval.g) :
+									(tempVal.g < retval.g ? tempVal.g : retval.g);
+
+								retval.b = diffuseBGreater ?
+									(tempVal.b > retval.b ? tempVal.b : retval.b) :
+									(tempVal.b < retval.b ? tempVal.b : retval.b);
+							}
+							else {
+								retval.r = NormalDotView;
+								retval.g = NormalDotView;
+								retval.b = NormalDotView;
+							}
 						}
 						else {
-							retval.r = NormalDotView;
-							retval.g = NormalDotView;
-							retval.b = NormalDotView;
-						}
-					}
-					else {
 
-						if (mReflectedOn) {
-							//{-vx + 2*nx*(nx*vx + ny*vy + nz*vz),-vy + 2*ny*(nx*vx + ny*vy + nz*vz),-vz + 2*nz*(nx*vx + ny*vy + nz*vz)}
+							if (mReflectedOn) {
+								//{-vx + 2*nx*(nx*vx + ny*vy + nz*vz),-vy + 2*ny*(nx*vx + ny*vy + nz*vz),-vz + 2*nz*(nx*vx + ny*vy + nz*vz)}
 
-							float rx = -vx + 2 * nx * (nx * vx + ny * vy + nz * vz);
-							float ry = -vy + 2 * ny * (nx * vx + ny * vy + nz * vz);
-							float rz = -vz + 2 * nz * (nx * vx + ny * vy + nz * vz);
+								float rx = -vx + 2 * nx * (nx * vx + ny * vy + nz * vz);
+								float ry = -vy + 2 * ny * (nx * vx + ny * vy + nz * vz);
+								float rz = -vz + 2 * nz * (nx * vx + ny * vy + nz * vz);
 
-							if (mObserverSpaceOn) {
+								if (mObserverSpaceOn) {
 
-								float& cx = rx;
-								float& cy = ry;
-								float& cz = rz;
+									float& cx = rx;
+									float& cy = ry;
+									float& cz = rz;
 
-								float& ix = ox;
-								float& iy = oy;
-								float& iz = oz;
+									float& ix = ox;
+									float& iy = oy;
+									float& iz = oz;
 
-								float cx2 = cx * cx;
-								float cy2 = cy * cy;
-								float cz2 = cz * cz;
+									float cx2 = cx * cx;
+									float cy2 = cy * cy;
+									float cz2 = cz * cz;
 
-								float obsx = (cy2 * ix + cx2 * cz * ix + cx * cy * (-1 + cz) * iy) / (cx2 + cy2) - cx * iz;
-								float obsy = (cx * cy * (-1 + cz) * ix + cx2 * iy + cy2 * cz * iy) / (cx2 + cy2) - cy * iz;
-								float obsz = cx * ix + cy * iy + cz * iz;
+									float obsx = (cy2 * ix + cx2 * cz * ix + cx * cy * (-1 + cz) * iy) / (cx2 + cy2) - cx * iz;
+									float obsy = (cx * cy * (-1 + cz) * ix + cx2 * iy + cy2 * cz * iy) / (cx2 + cy2) - cy * iz;
+									float obsz = cx * ix + cy * iy + cz * iz;
 
-								if (mpSubTex) {
-									Point3 oUVW;
-									float toClamp = 0.0;
+									if (mpSubTex) {
+										Point3 oUVW;
+										float toClamp = 0.0;
 
-									toClamp = (float)(obsx + 1) / 2;
-									oUVW.x = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
+										toClamp = (float)(obsx + 1) / 2;
+										oUVW.x = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
 
-									toClamp = (float)(obsy + 1) / 2;
-									oUVW.y = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
-									oUVW.z = 0.0f;
+										toClamp = (float)(obsy + 1) / 2;
+										oUVW.y = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
+										oUVW.z = 0.0f;
 
-									//float sqrRadius = pow(oUVW.x - 0.5, 2.0) + pow(oUVW.x - 0.5, 2.0);
-									//float sqrRadiusMax = pow(maxUVW.x - 0.5, 2.0) + pow(maxUVW.x - 0.5, 2.0);
+										//float sqrRadius = pow(oUVW.x - 0.5, 2.0) + pow(oUVW.x - 0.5, 2.0);
+										//float sqrRadiusMax = pow(maxUVW.x - 0.5, 2.0) + pow(maxUVW.x - 0.5, 2.0);
 
-									//if (sqrRadius < sqrRadiusMax) {
-									//	maxUVW = oUVW;
-									//}
+										//if (sqrRadius < sqrRadiusMax) {
+										//	maxUVW = oUVW;
+										//}
 
-									//scp.SetUVW(maxUVW);
+										//scp.SetUVW(maxUVW);
 
-									scp.SetUVW(oUVW);
-									AColor tempVal = mpSubTex->EvalColor(scp);
+										scp.SetUVW(oUVW);
+										AColor tempVal = mpSubTex->EvalColor(scp);
 
-									retval.r = specularRGreater ?
-										(tempVal.r > retval.r ? tempVal.r : retval.r) :
-										(tempVal.r < retval.r ? tempVal.r : retval.r);
+										retval.r = specularRGreater ?
+											(tempVal.r > retval.r ? tempVal.r : retval.r) :
+											(tempVal.r < retval.r ? tempVal.r : retval.r);
 
-									retval.g = specularGGreater ?
-										(tempVal.g > retval.g ? tempVal.g : retval.g) :
-										(tempVal.g < retval.g ? tempVal.g : retval.g);
+										retval.g = specularGGreater ?
+											(tempVal.g > retval.g ? tempVal.g : retval.g) :
+											(tempVal.g < retval.g ? tempVal.g : retval.g);
 
-									retval.b = specularBGreater ?
-										(tempVal.b > retval.b ? tempVal.b : retval.b) :
-										(tempVal.b < retval.b ? tempVal.b : retval.b);									
+										retval.b = specularBGreater ?
+											(tempVal.b > retval.b ? tempVal.b : retval.b) :
+											(tempVal.b < retval.b ? tempVal.b : retval.b);
+									}
+									else
+									{
+										retval.r = obsx;
+										retval.g = obsy;
+										retval.b = obsz;
+									}
 								}
 								else
 								{
-									retval.r = obsx;
-									retval.g = obsy;
-									retval.b = obsz;
+									retval.r = rx;
+									retval.g = ry;
+									retval.b = rz;
 								}
 							}
 							else
 							{
-								retval.r = rx;
-								retval.g = ry;
-								retval.b = rz;
+								retval.r = nDir.x;
+								retval.g = nDir.y;
+								retval.b = nDir.z;
 							}
-						}
-						else
-						{
-							retval.r = nDir.x;
-							retval.g = nDir.y;
-							retval.b = nDir.z;
 						}
 					}
 				}
 			}
+			//if ((!receivesLight) && mpSubTex && (mDiffuseOn || mObserverSpaceOn)) {
+
+			//	Point3 noLight(0.0f, 0.0f, 0.0f);
+
+			//	scp.SetUVW(noLight);
+			//	retval = mpSubTex->EvalColor(scp);
+			//}
 		}
-		//if ((!receivesLight) && mpSubTex && (mDiffuseOn || mObserverSpaceOn)) {
-
-		//	Point3 noLight(0.0f, 0.0f, 0.0f);
-
-		//	scp.SetUVW(noLight);
-		//	retval = mpSubTex->EvalColor(scp);
-		//}
 
 	}
 
