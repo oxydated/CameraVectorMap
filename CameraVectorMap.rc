@@ -55,11 +55,11 @@ STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_VISIBLE
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     GROUPBOX        "Color / Gamma / Gain",IDC_STATIC,19,15,174,179
-    LTEXT           "Light or Observer?",IDC_STATIC,34,30,60,8
+    LTEXT           "Normal Vector?",IDC_STATIC,34,30,49,8
     CONTROL         "",IDC_VIEWVECTOR_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,29,11,10
     LTEXT           "Reflected?",IDC_STATIC,34,62,35,8
     CONTROL         "",IDC_REFLECTED_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,61,11,10
-    LTEXT           "Inverted?",IDC_STATIC,34,78,32,8
+    LTEXT           "Invert Normals?",IDC_STATIC,34,78,52,8
     CONTROL         "",IDC_INVERTED_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,77,11,10
     LTEXT           "Observer Space?",IDC_STATIC,34,94,56,8
     CONTROL         "",IDC_OBSERVER_ON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,101,93,11,10

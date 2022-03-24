@@ -531,14 +531,50 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 		}
 	}
 
+	if (mInvertedOn) {
+		normalVector.x *= -1.;
+		normalVector.y *= -1.;
+		normalVector.z *= -1.;
+	}
+
 	float ox = viewVector.x;
 	float oy = viewVector.y;
 	float oz = viewVector.z;
 
 	if (mViewVectorOn) {
-		retval.r = normalVector.x;
-		retval.g = normalVector.y;
-		retval.b = normalVector.z;
+
+		if (mpSubTex) {
+			//float viewDotNormal = fabs(normalVector.x* ox + normalVector.y * oy + normalVector.z * oz);
+			float viewDotNormal = fabs(normalVector.z);
+
+			Point3 oUVW;
+			float toClamp = 0.0;
+
+			toClamp = viewDotNormal;
+			oUVW.x = toClamp > 0.99 ? 0.99 : (toClamp < 0.0 ? 0.0 : toClamp);
+			oUVW.y = 0.5;
+			oUVW.z = 0.0f;
+
+			scp.SetUVW(oUVW);
+			AColor tempVal = mpSubTex->EvalColor(scp);
+
+			retval.r = diffuseRGreater ?
+				(tempVal.r > retval.r ? tempVal.r : retval.r) :
+				(tempVal.r < retval.r ? tempVal.r : retval.r);
+
+			retval.g = diffuseGGreater ?
+				(tempVal.g > retval.g ? tempVal.g : retval.g) :
+				(tempVal.g < retval.g ? tempVal.g : retval.g);
+
+			retval.b = diffuseBGreater ?
+				(tempVal.b > retval.b ? tempVal.b : retval.b) :
+				(tempVal.b < retval.b ? tempVal.b : retval.b);
+		}
+		else {
+			retval.r = normalVector.x;
+			retval.g = normalVector.y;
+			retval.b = normalVector.z;
+		}
 	}
 	else 
 	{
@@ -616,10 +652,10 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 			float toClamp = 0.0;
 
 			toClamp = (float)(u + 1) / 2;
-			oUVW.x = (1. / 4.) * ((toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp)) + uOff);
+			oUVW.x = (1. / 4.) * ((toClamp > 0.99 ? 0.99 : (toClamp < 0.0 ? 0.0 : toClamp)) + uOff);
 
 			toClamp = (float)(v + 1) / 2;
-			oUVW.y = (1. / 3.) * ((toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp)) + vOff);
+			oUVW.y = (1. / 3.) * ((toClamp > 0.99 ? 0.99 : (toClamp < 0.0 ? 0.0 : toClamp)) + vOff);
 			oUVW.z = 0.0f;
 
 			scp.SetUVW(oUVW);
@@ -654,7 +690,7 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 								float toClamp = 0.0;
 
 								toClamp = NormalDotView * 0.8 + 0.1;
-								oUVW.x = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
+								oUVW.x = toClamp > 0.99 ? 0.99 : (toClamp < 0.0 ? 0.0 : toClamp);
 								oUVW.y = 0.5;
 								oUVW.z = 0.0f;
 
@@ -716,10 +752,10 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 										float toClamp = 0.0;
 
 										toClamp = (float)(obsx + 1) / 2;
-										oUVW.x = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
+										oUVW.x = toClamp > 0.99 ? 0.99 : (toClamp < 0.0 ? 0.0 : toClamp);
 
 										toClamp = (float)(obsy + 1) / 2;
-										oUVW.y = toClamp > 1.0 ? 1.0 : (toClamp < 0.0 ? 0.0 : toClamp);
+										oUVW.y = toClamp > 0.99 ? 0.99 : (toClamp < 0.0 ? 0.0 : toClamp);
 										oUVW.z = 0.0f;
 
 										//float sqrRadius = pow(oUVW.x - 0.5, 2.0) + pow(oUVW.x - 0.5, 2.0);
@@ -787,7 +823,7 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 	//	retval = mpSubTex->EvalColor(scp);
 	//}
 
-	return mInvertedOn ? retval * -1 : retval;
+	return retval;
 }
 
 float CameraVectorMap::EvalMono(ShadeContext& sc) {
