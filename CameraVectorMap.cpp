@@ -448,6 +448,12 @@ BITMAPINFO* CameraVectorMap::GetVPDisplayDIB(TimeValue t, TexHandleMaker& thmake
 AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 	AColor retval;
 
+	Point3 pos = sc.P();
+
+	Point3 posWorld = sc.VectorTo(pos, REF_WORLD);
+
+	Point3 center = sc.VectorFrom(Point3(0, 0, 0), REF_WORLD);
+
 	retval.r = 0.0;
 	retval.g = 0.0;
 	retval.b = 0.0;
@@ -590,62 +596,83 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 			Point3 normalWorld = scp.VectorToNoScale(normalVector, REF_WORLD);
 
+			Point3 viewWorld = scp.VectorToNoScale(viewVector, REF_WORLD);
+
 			float nx = normalWorld.x;
 			float ny = normalWorld.y;
 			float nz = normalWorld.z;
+
+			float vx = viewWorld.x;
+			float vy = viewWorld.y;
+			float vz = viewWorld.z;
+
+
+			//float rx = -vx + 2 * nx * (nx * vx + ny * vy + nz * vz);
+			//float ry = -vy + 2 * ny * (nx * vx + ny * vy + nz * vz);
+			//float rz = -vz + 2 * nz * (nx * vx + ny * vy + nz * vz);
+
+			float rx = vx - 2 * nx * (nx * vx + ny * vy + nz * vz);
+			float ry = vy - 2 * ny * (nx * vx + ny * vy + nz * vz);
+			float rz = vz - 2 * nz * (nx * vx + ny * vy + nz * vz);
+
+			//float rx = normalWorld.x;
+			//float ry = normalWorld.y;
+			//float rz = normalWorld.z;
+
+			////////////////////////////////////////////////////////////////////////////////
 			float u, v;
 			float uOff, vOff;
 
-			if (nx > ny && nx >= -ny && nx > nz && nx >= -nz) {
-				//nx=1
-				v = ny / nx;
-				u = -nz / nx;
+			if (rx > ry && rx >= -ry && rx > rz && rx >= -rz) {
+				//rx=1
+				v = rz / rx;
+				u = ry / rx;
 				uOff = 2.;
 				vOff = 1.;
 			}
 
-			if (ny >= nx && ny > -nx && ny >= nz && ny > -nz) {
-				u = nx / ny;
-				//ny=1
-				v = -nz / ny;
-				uOff = 1.;
-				vOff = 2.;
-			}
+			if (-rx >= ry && -rx > -ry && -rx >= rz && -rx > -rz) {
 
-			if (nz >= nx && nz > -nx && nz > ny && nz >= -ny) {
-
-				u = nx / nz;
-				v = ny / nz;
-				//nz=1
-				uOff = 1.;
-				vOff = 1.;
-			}
-
-			if (-nx >= ny && -nx > -ny && -nx >= nz && -nx > -nz) {
-
-				//nx=- 1
-				v = -(ny / nx);
-				u = -(nz / nx);
+				//rx=- 1
+				v = -(rz / rx);
+				u = (ry / rx);
 				uOff = 0.;
 				vOff = 1.;
 			}
 
-			if (-ny > nx && -ny >= -nx && -ny > nz && -ny >= -nz) {
-
-				u = -(nx / ny);
-				//ny=- 1
-				v = -(nz / ny);
-				uOff = 1.;
-				vOff = 0.;
-			}
-
-			if (-nz > nx && -nz >= -nx && -nz >= ny && -nz > -ny) {
-
-				u = (nx / nz);
-				v = -(ny / nz);
-				//nz=- 1
+			if (ry >= rx && ry > -rx && ry >= rz && ry > -rz) {
+				//ry=1
+				u = -rx / ry;
+				v = rz / ry;
 				uOff = 3.;
 				vOff = 1.;
+			}
+
+			if (-ry > rx && -ry >= -rx && -ry > rz && -ry >= -rz) {
+
+				//ry=- 1
+				u = -(rx / ry);
+				v = -(rz / ry);
+				uOff = 1.;
+				vOff = 1.;
+			}
+
+			if (rz >= rx && rz > -rx && rz > ry && rz >= -ry) {
+
+				//rz=1
+				u = rx / rz;
+				v = ry / rz;
+				uOff = 1.;
+				vOff = 2.;
+			}
+
+			if (-rz > rx && -rz >= -rx && -rz >= ry && -rz > -ry) {
+
+				//rz=- 1
+				u = -(rx / rz);
+				v = (ry / rz);
+				uOff = 1.;
+				vOff = 0.;
 			}
 
 			Point3 oUVW;
