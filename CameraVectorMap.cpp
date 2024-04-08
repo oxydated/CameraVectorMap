@@ -505,21 +505,64 @@ AColor CameraVectorMap::EvalColor(ShadeContext& sc) {
 
 	if (mpNormalMap) {
 
-		float& nx = normalVector.x;
-		float& ny = normalVector.y;
-		float& nz = normalVector.z;
+		float nx = normalVector.x;
+		float ny = normalVector.y;
+		float nz = normalVector.z;
 
 		AColor normalColor = mpNormalMap->EvalColor(sc);
 
-		float sx = 2 * normalColor.r - 1.0;
-		float sy = 2 * normalColor.g - 1.0;
-		float sz = 2 * normalColor.b - 1.0;
+		Point3 tempS;
+
+		tempS.x = 2 * normalColor.r - 1.0;
+		tempS.y = 2 * normalColor.g - 1.0;
+		tempS.z = 2 * normalColor.b - 1.0;
+
+		Point3 normS = Normalize(tempS);
+
+		float sx = normS.x;
+		float sy = normS.y;
+		float sz = normS.z;
 
 		float rx, ry, rz;
 
 		if (mNormalMapTangentOn)
 		{
-			transformFromTangentSpaceToWorld(nx, ny, nz, sx, sy, sz, rx, ry, rz);
+			Point3 basis[3];
+
+			Point3 dPdu, dPdv;
+			Point3 dPdx, dPdy;
+
+			sc.DP(dPdx, dPdy);
+
+			UVGen* uvGen = mpNormalMap->GetTheUVGen();
+
+			if (uvGen) {
+				uvGen->GetBumpDP(sc, dPdu, dPdv);
+			}
+
+			Point3 originalNormal = sc.Normal();
+
+			float nx = originalNormal.x;
+			float ny = originalNormal.y;
+			float nz = originalNormal.z;
+
+			int hasBasisVectors = sc.BumpBasisVectors(basis, 0, 1);
+			if (hasBasisVectors) {
+			}
+			else {
+				sc.DPdUVW(basis, 1);
+			}
+			//transformFromTangentSpaceToWorld(nx, ny, nz, sx, sy, sz, rx, ry, rz);
+
+			float ux = basis[0].x;
+			float uy = basis[0].y;
+			float uz = basis[0].z;
+
+			normalTransformed( nx, ny, nz, sx, sy, sz, ux, uy, uz, rx, ry, rz);
+
+			if (std::isnan(rx) || std::isnan(ry) || std::isnan(rz)) {
+				return AColor(1.0, 0.0, 0.0, 1.0);
+			}
 
 			normalVector.x = rx;
 			normalVector.y = ry;
